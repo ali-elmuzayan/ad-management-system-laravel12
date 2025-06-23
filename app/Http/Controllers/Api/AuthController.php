@@ -10,6 +10,7 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware ;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\RateLimiter;
 
@@ -39,7 +40,7 @@ class AuthController extends Controller implements HasMiddleware
             $seconds = RateLimiter::availableIn($key);
             $minute = ceil($seconds/60);
             return ApiResponse::sendResponse(429, 'Too many login attempts', [
-                'message' => "Please try again in {$minute} minutes.",
+                'message' => "Please try again in $minute minutes.",
             ]);
         }
 
@@ -47,16 +48,16 @@ class AuthController extends Controller implements HasMiddleware
 
         $credentials = $request->only('email', 'password');
 
-        if (auth()->attempt($credentials)) {
+        if (Auth::attempt($credentials)) {
 
             RateLimiter::clear($key); // Clear the rate limiter on successful login
 
-            $user = auth()->user();
+            $user = Auth::user();
 
             $token = $user->createToken('auth_token')->plainTextToken;
 
             return ApiResponse::sendResponse(200, 'Login successful', [
-                'user' => auth()->user(),
+                'user' => Auth::user(),
                 'token' => $token,
             ]);
         }
@@ -89,12 +90,10 @@ class AuthController extends Controller implements HasMiddleware
 
     public function logout(Request $request)
     {
-        $user = auth()->user();
-        if ($user) {
-            $user->tokens()->delete();
-            return ApiResponse::sendResponse(200, 'Logout successful', null);
-        }
-        return ApiResponse::sendResponse(401, 'Unauthorized', null);
+        $request->user()->tokens()->delete();
+
+    return ApiResponse::sendResponse(200, 'Logout successful', null);
+
     }
 
 
